@@ -22,6 +22,9 @@ class TransformFactory:
         self.zoom_weight = transform_cfg.get("zoom_weight", None)
         self.mode = mode
 
+    def rebuild(self, seq_id: str, worker_id: int = 0):
+        return self.build_for_stream(seq_id, worker_id)
+
     def build_for_random(self):
         """ ランダムアクセス用の transform を構築 """
         angle = np.random.uniform(*self.rotate_range)
