@@ -1,0 +1,10 @@
+opencv-python
+numpy
+numba
+torch
+tqdm
+h5py
+hdf5plugin
+einops
+hydra-core
+omegaconf
