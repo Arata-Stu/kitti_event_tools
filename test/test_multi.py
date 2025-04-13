@@ -1,6 +1,7 @@
 # test.py
 import sys
 sys.path.append("..")
+from omegaconf import OmegaConf
 from src.data.stream_dataset import build_stream_dataset
 from src.data.utils.multi_stream_sampler import MultiStreamSampler
 from torch.utils.data import DataLoader
@@ -9,12 +10,11 @@ from pathlib import Path
 def main():
     
 
-    data_dir = Path("/Users/at/dataset/mini_kitti")
-    ev_repr_name = "accum_10000_histogram"
-    seq_len = 5
-    seq_ids = ["0000"]
+    config_path = "../config/test.yaml"
+    cfg = OmegaConf.load(config_path)
+    seq_ids = ["0000"]  # シーケンス複数で分配確認
 
-    datasets = build_stream_dataset(data_dir, ev_repr_name, seq_len, seq_ids, downsample=True)
+    datasets = build_stream_dataset(dataset_mode="train", seq_ids=seq_ids, dataset_cfg=cfg.dataset)
     sampler = MultiStreamSampler(datasets, batch_size=4)
     loader = DataLoader(sampler, batch_size=None, num_workers=4)
 
