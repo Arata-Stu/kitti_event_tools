@@ -1,15 +1,10 @@
-from pathlib import Path
-from torch.utils.data import Dataset, ConcatDataset
-from .sequence_rnd import SequenceForRandom
+from torch.utils.data import Dataset
 
 # ----- 複数シーケンス統合の RandomDataset クラス -----
 class RandomConcatDataset(Dataset):
     """
-    IntegratedSequenceRandomDataset は、シーケンスID "0000" ～ "0020" の
-    複数シーケンスを統合したランダムアクセス用データセットです。
-    
-    各シーケンスは SequenceRandom として読み込まれ、内部では torch の ConcatDataset により
-    統合されます。返り値は各サンプルごとに
+    複数の SequenceForRandom インスタンスを統合して、1 つのランダムアクセス用データセットとして扱えるようにします。
+    返り値は各サンプルごとに
       {
          "images": [seq_len 枚の画像],
          "labels": [各画像のラベル情報リスト],
@@ -17,19 +12,38 @@ class RandomConcatDataset(Dataset):
          "reset_state": bool
       }
     の辞書型となります。
+    streaming の場合と同様に、個々のサンプルの構造は統一されています。
     """
-    def __init__(self, data_dir: Path, ev_repr_name: str, seq_len: int, seq_ids=None, downsample: bool = False):
-        # seq_ids が指定されなければ "0000"～"0020" とする
-        if seq_ids is None:
-            seq_ids = [f"{i:04d}" for i in range(21)]
-        self.sequences = [
-            SequenceForRandom(data_dir, seq_id, ev_repr_name, seq_len=seq_len, downsample=downsample)
-            for seq_id in seq_ids
-        ]
-        self.concat_dataset = ConcatDataset(self.sequences)
-    
+    def __init__(self, sequences):
+        """
+        Parameters:
+          - sequences: SequenceForRandom のインスタンスのリスト
+        """
+        self.sequences = sequences
+        # 各シーケンスの長さリストを作成（各シーケンスは __len__ を実装しているものとする）
+        self.sequence_lengths = [len(seq) for seq in sequences]
+        # 累積長を求める（[len(seq1), len(seq1)+len(seq2), ...] のようなリスト）
+        self.cumulative_lengths = []
+        total = 0
+        for l in self.sequence_lengths:
+            total += l
+            self.cumulative_lengths.append(total)
+
     def __len__(self):
-        return len(self.concat_dataset)
-    
+        # 全シーケンスの合計サンプル数を返す
+        return self.cumulative_lengths[-1]
+
     def __getitem__(self, idx):
-        return self.concat_dataset[idx]
+        # グローバルなインデックス idx から、対象となるシーケンスと
+        # シーケンス内のローカルなインデックスを特定する
+        seq_idx = 0
+        for cum_len in self.cumulative_lengths:
+            if idx < cum_len:
+                break
+            seq_idx += 1
+
+        if seq_idx == 0:
+            local_idx = idx
+        else:
+            local_idx = idx - self.cumulative_lengths[seq_idx - 1]
+        return self.sequences[seq_idx][local_idx]
