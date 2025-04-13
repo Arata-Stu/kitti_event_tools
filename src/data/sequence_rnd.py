@@ -23,9 +23,15 @@ class SequenceForRandom(SequenceBase):
             events = f["data"][index: index + self.seq_len]
         # randomデータセットの場合は, reset_stateは常にTrue
         reset_state =True
-        return {
+
+        outputs = {
             "images": images,
             "labels": labels_seq,
             "events": events,
             "reset_state": reset_state
         }
+        # transform が指定されていれば、適用する
+        if self.transform:
+            outputs = self.transform(outputs)
+            
+        return outputs

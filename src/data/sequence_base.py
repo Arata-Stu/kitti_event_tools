@@ -33,12 +33,18 @@ class SequenceBase:
     │         ├── <sequence_name>.h5  
     """
     
-    def __init__(self, data_dir: Path, sequence_name: str, ev_repr_name: str, seq_len: int, downsample: bool = False):
+    def __init__(self, data_dir: Path,
+                 sequence_name: str,
+                 ev_repr_name: str,
+                 seq_len: int,
+                 downsample: bool = False,
+                 transform=None):
         self.data_dir = data_dir
         self.sequence_name = sequence_name
         self.ev_repr_name = ev_repr_name
         self.seq_len = seq_len
-        self.downsample = downsample  # downsample オプションの保存
+        self.downsample = downsample  
+        self.transform = transform
         
         # 画像、ラベル、イベントのファイルパスを設定
         self.images_dir = self.data_dir / "images" / self.sequence_name
@@ -171,5 +177,9 @@ class SequenceBase:
             "events": events,
             "reset_state": reset_state
         }
+
+        # transform が指定されていれば、適用する
+        if self.transform:
+            outputs = self.transform(outputs)
         
         return outputs

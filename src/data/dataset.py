@@ -4,7 +4,12 @@ from src.data.sequence_stream import SequenceForStreaming
 from src.data.sequence_rnd import SequenceForRandom
 from src.data.rnd_dataset import RandomConcatDataset
 
-def build_stream_dataset(data_dir: Path, ev_repr_name: str, seq_len: int, seq_ids: list = None, downsample: bool = False):
+def build_stream_dataset(data_dir: Path,
+                         ev_repr_name: str,
+                         seq_len: int,
+                         seq_ids: list = None,
+                         downsample: bool = False,
+                         transform=None):
     """
     指定した複数シーケンス（シーケンスID）のストリーミングデータセットを作成するメソッドです。
     
@@ -25,7 +30,7 @@ def build_stream_dataset(data_dir: Path, ev_repr_name: str, seq_len: int, seq_id
     
     # 各シーケンスについて、SequenceForStreaming のインスタンスを生成
     streaming_sequences = [
-        SequenceForStreaming(data_dir, seq_id, ev_repr_name, seq_len, downsample=downsample)
+        SequenceForStreaming(data_dir, seq_id, ev_repr_name, seq_len, downsample=downsample, transform=transform)
         for seq_id in seq_ids
     ]
     
@@ -34,7 +39,12 @@ def build_stream_dataset(data_dir: Path, ev_repr_name: str, seq_len: int, seq_id
 
 
 
-def build_random_dataset(data_dir: Path, ev_repr_name: str, seq_len: int, seq_ids: list = None, downsample: bool = False):
+def build_random_dataset(data_dir: Path,
+                         ev_repr_name: str,
+                         seq_len: int,
+                         seq_ids: list = None,
+                         downsample: bool = False,
+                         transform=None):
     """
     指定した複数シーケンス（シーケンスID）のランダムアクセス用データセットを作成するメソッドです。
 
@@ -55,7 +65,7 @@ def build_random_dataset(data_dir: Path, ev_repr_name: str, seq_len: int, seq_id
     
     # 各シーケンスを SequenceForRandom としてインスタンス化する
     sequences = [
-        SequenceForRandom(data_dir, seq_id, ev_repr_name, seq_len, downsample)
+        SequenceForRandom(data_dir, seq_id, ev_repr_name, seq_len, downsample, transform)
         for seq_id in seq_ids
     ]
     

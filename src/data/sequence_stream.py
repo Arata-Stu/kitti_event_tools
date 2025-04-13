@@ -13,7 +13,7 @@ class SequenceForStreaming(SequenceBase):
     
     1回のイテレーションで、シーケンス内の全連続した seq_len フレームのサンプルを順番に生成します。
     """
-    def __init__(self, data_dir: Path, sequence_name: str, ev_repr_name: str, seq_len: int, downsample: bool = False):
+    def __init__(self, data_dir: Path, sequence_name: str, ev_repr_name: str, seq_len: int, downsample: bool = False, transform=None):
         """
         コンストラクタで downsample 引数を受け取り、親クラスの初期化時に渡す。
 
@@ -24,7 +24,7 @@ class SequenceForStreaming(SequenceBase):
           - seq_len: シーケンス長（連続フレーム数）
           - downsample: True の場合、画像を1/2サイズにリサイズし、対応するラベルの bbox も同様に変換する
         """
-        super().__init__(data_dir, sequence_name, ev_repr_name, seq_len=seq_len, downsample=downsample)
+        super().__init__(data_dir, sequence_name, ev_repr_name, seq_len=seq_len, downsample=downsample, transform=transform)
 
     def __iter__(self):
         # イベントデータは毎回ファイルをオープンするのではなく、1回だけオープンして使い回す
@@ -46,11 +46,15 @@ class SequenceForStreaming(SequenceBase):
                 
                 # サンプルの先頭がシーケンスの最初であれば reset_state = True とする
                 reset_state = (index == 0)
-                
-                yield {
+                outputs = {
                     "images": images,         # 各画像は RGB の numpy 配列
                     "labels": labels_seq,       # 各フレームのラベル情報（リスト）
                     "events": events,           # 連続するイベントデータ（numpy 配列）
                     "reset_state": reset_state  # シーケンス初回を示すフラグ
                 }
+                # transform が指定されていれば、適用する
+                if self.transform:
+                    outputs = self.transform(outputs)
+
+                yield outputs
 
