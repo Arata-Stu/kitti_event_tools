@@ -1,4 +1,5 @@
 from pathlib import Path
+import numpy as np
 import cv2
 import h5py
 try:
@@ -138,6 +139,7 @@ class SequenceBase:
             # 幅と高さを半分に
             new_size = (width // 2, height // 2)
             image = cv2.resize(image, new_size)
+        image = np.transpose(image, (2, 0, 1))
         return image
     
     def __len__(self):
