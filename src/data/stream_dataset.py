@@ -1,20 +1,27 @@
+from omegaconf import DictConfig
 from pathlib import Path
 from src.data.sequence_stream import SequenceForStreaming, StreamingSequenceDataset
-from src.data.utils.transform_factory import make_transform_for_sequence
+from src.data.utils.transform_factory import TransformFactory
 
 
-def build_stream_dataset(data_dir: Path,
-                         ev_repr_name: str,
-                         seq_len: int,
-                         seq_ids: list = None,
-                         downsample: bool = False):
+def build_stream_dataset(dataset_mode: str,
+                         seq_ids: list,
+                         dataset_cfg: DictConfig) -> list:
+    
+    data_path = Path(dataset_cfg.path)
+    ev_repr_name = dataset_cfg.ev_repr_name
+    seq_len = dataset_cfg.sequence_length
+    downsample = dataset_cfg.downsample
+    transform_cfg = dataset_cfg.transform
+    transform_factory = TransformFactory(dataset_mode, transform_cfg)
+
     if seq_ids is None:
         seq_ids = [f"{i:04d}" for i in range(21)]
 
     datasets = []
     for seq_id in seq_ids:
-        transform = make_transform_for_sequence(seq_id)
-        seq = SequenceForStreaming(data_dir, seq_id, ev_repr_name, seq_len, downsample=downsample, transform=transform)
+        transform = transform_factory.build_for_stream(seq_id)
+        seq = SequenceForStreaming(data_path, seq_id, ev_repr_name, seq_len, downsample=downsample, transform=transform)
         ds = StreamingSequenceDataset(seq)
         datasets.append(ds)
 

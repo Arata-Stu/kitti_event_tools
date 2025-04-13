@@ -1,6 +1,7 @@
 import sys
 sys.path.append("..")
 
+from omegaconf import OmegaConf
 import cv2
 import numpy as np
 import torch
@@ -36,12 +37,11 @@ def save_sequence_as_video(images_list, out_path, fps=10):
     print(f"✅ 動画保存完了: {out_path}")
 
 def main():
-    data_dir = Path("/Users/at/dataset/mini_kitti")
-    ev_repr_name = "accum_10000_histogram"
-    seq_len = 5
+    config_path = "../config/test.yaml"
+    cfg = OmegaConf.load(config_path)
     seq_ids = ["0000"]
 
-    datasets = build_stream_dataset(data_dir, ev_repr_name, seq_len, seq_ids, downsample=True)
+    datasets = build_stream_dataset(dataset_mode="train", seq_ids=seq_ids, dataset_cfg=cfg.dataset)
     ds = datasets[0]  # シーケンス0000だけ
 
     save_dir = Path("debug_videos")

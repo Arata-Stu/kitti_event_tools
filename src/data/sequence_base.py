@@ -166,7 +166,9 @@ class SequenceBase:
             img = self.load_image(i)
             images.append(img)
             labels_seq.append(self.labels.get(i, []))
-        
+            
+        images = np.stack(images)  # [T, C, H, W]
+
         with h5py.File(self.event_file, 'r') as f:
             events = f["data"][index : index + self.seq_len]
         

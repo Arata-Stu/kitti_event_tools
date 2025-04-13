@@ -1,3 +1,4 @@
+import numpy as np
 from pathlib import Path
 import h5py
 try:
@@ -37,6 +38,7 @@ class SequenceForStreaming(SequenceBase):
                     img = self.load_image(i)
                     images.append(img)
                     labels_seq.append(self.labels.get(i, []))
+                images = np.stack(images, axis=0)  # [seq_len, C, H, W]
 
                 events = f["data"][index : index + self.seq_len]
                 reset_state = (index == 0)

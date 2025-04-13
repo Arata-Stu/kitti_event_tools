@@ -1,0 +1,9 @@
+dataset:
+  path: /Users/at/dataset/mini_kitti
+  ev_repr_name: accum_10000_histogram
+  sequence_length: 5
+  downsample: True
+  transform:  
+    target_size: [640, 640]
+    rotate_range: [-10, 10]
+    zoom_weight: [8, 2]
