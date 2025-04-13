@@ -61,7 +61,7 @@ class SequenceBase:
         self.num_image_frames = len(self.image_files)
         with h5py.File(self.event_file, 'r') as f:
             # 仮定：キー "events" にイベントデータが保存され、shape は (N, ...) の形式
-            self.num_event_frames = f["events"].shape[0]
+            self.num_event_frames = f["data"].shape[0]
         
         # 連続して seq_len フレーム取得可能なサンプル数
         self.total_frames = min(self.num_image_frames, self.num_event_frames)
@@ -148,7 +148,7 @@ class SequenceBase:
             labels_seq.append(self.labels.get(i, []))
         
         with h5py.File(self.event_file, 'r') as f:
-            events = f["events"][index : index + self.seq_len]
+            events = f["data"][index : index + self.seq_len]
         
         # サンプルの先頭がシーケンスの最初であれば reset_state True を付与
         reset_state = (index == 0)

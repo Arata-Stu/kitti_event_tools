@@ -30,7 +30,7 @@ class SequenceForStreaming(SequenceBase):
                 
                 # h5py.File を使って、連続するイベントデータを取得
                 # ※ ここでは、イベントデータがキー "events" に保存されている前提
-                events = f["events"][index : index + self.seq_len]
+                events = f["data"][index : index + self.seq_len]
                 
                 # サンプルの先頭がシーケンスの最初であれば reset_state = True とする
                 reset_state = (index == 0)
