@@ -1,6 +1,6 @@
 from pathlib import Path
 from torch.utils.data import Dataset, ConcatDataset
-from .sequence_rnd import SequenceRandom
+from .sequence_rnd import SequenceForRandom
 
 # ----- 複数シーケンス統合の RandomDataset クラス -----
 class RandomConcatDataset(Dataset):
@@ -18,12 +18,12 @@ class RandomConcatDataset(Dataset):
       }
     の辞書型となります。
     """
-    def __init__(self, data_dir: Path, ev_repr_name: str, seq_len: int, seq_ids=None):
+    def __init__(self, data_dir: Path, ev_repr_name: str, seq_len: int, seq_ids=None, downsample: bool = False):
         # seq_ids が指定されなければ "0000"～"0020" とする
         if seq_ids is None:
             seq_ids = [f"{i:04d}" for i in range(21)]
         self.sequences = [
-            SequenceRandom(data_dir, seq_id, ev_repr_name, seq_len=seq_len)
+            SequenceForRandom(data_dir, seq_id, ev_repr_name, seq_len=seq_len, downsample=downsample)
             for seq_id in seq_ids
         ]
         self.concat_dataset = ConcatDataset(self.sequences)

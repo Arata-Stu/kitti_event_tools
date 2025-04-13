@@ -33,11 +33,12 @@ class SequenceBase:
     │         ├── <sequence_name>.h5  
     """
     
-    def __init__(self, data_dir: Path, sequence_name: str, ev_repr_name: str, seq_len: int):
+    def __init__(self, data_dir: Path, sequence_name: str, ev_repr_name: str, seq_len: int, downsample: bool = False):
         self.data_dir = data_dir
         self.sequence_name = sequence_name
         self.ev_repr_name = ev_repr_name
         self.seq_len = seq_len
+        self.downsample = downsample  # downsample オプションの保存
         
         # 画像、ラベル、イベントのファイルパスを設定
         self.images_dir = self.data_dir / "images" / self.sequence_name
@@ -60,7 +61,7 @@ class SequenceBase:
         # 画像とイベントデータの総フレーム数取得
         self.num_image_frames = len(self.image_files)
         with h5py.File(self.event_file, 'r') as f:
-            # 仮定：キー "events" にイベントデータが保存され、shape は (N, ...) の形式
+            # 仮定：キー "data" にイベントデータが保存され、shape は (N, ...) の形式
             self.num_event_frames = f["data"].shape[0]
         
         # 連続して seq_len フレーム取得可能なサンプル数
@@ -91,13 +92,18 @@ class SequenceBase:
                     continue
                 try:
                     frame = int(fields[0])
+                    # bbox のパースとダウンサンプリング（downsample=True の場合、座標を1/2に）
+                    bbox = list(map(float, fields[6:10]))
+                    if self.downsample:
+                        bbox = [coord / 2 for coord in bbox]
+                    
                     label = {
                         "track_id": int(fields[1]),
                         "type": fields[2],
                         "truncated": float(fields[3]),
                         "occluded": int(fields[4]),
                         "alpha": float(fields[5]),
-                        "bbox": list(map(float, fields[6:10])),
+                        "bbox": bbox,
                         "dimensions": list(map(float, fields[10:13])),
                         "location": list(map(float, fields[13:16])),
                         "rotation_y": float(fields[16])
@@ -110,7 +116,7 @@ class SequenceBase:
     def load_image(self, index: int):
         """
         指定されたインデックスの画像を OpenCV を用いて読み込み、
-        BGR→RGB に変換して返す。
+        BGR→RGB に変換して返す。downsample オプションが True であれば、画像サイズを半分にリサイズする。
         """
         if index < 0 or index >= self.num_image_frames:
             raise IndexError("画像インデックスが範囲外です")
@@ -120,6 +126,12 @@ class SequenceBase:
             raise ValueError(f"画像の読み込みに失敗しました: {image_path}")
         # BGR→RGB 変換
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        
+        if self.downsample:
+            height, width = image.shape[:2]
+            # 幅と高さを半分に
+            new_size = (width // 2, height // 2)
+            image = cv2.resize(image, new_size)
         return image
     
     def __len__(self):
@@ -161,4 +173,3 @@ class SequenceBase:
         }
         
         return outputs
-
