@@ -8,7 +8,7 @@ class MultiStreamSampler(IterableDataset):
         self.batch_size = batch_size
 
     def __iter__(self):
-        iters = [iter(ds) for ds in self.datasets]
+        iters = [iter(ds) for ds in self.datasets]  # ✅ ここで毎回iterを作り直す
         while True:
             batch = []
             for _ in range(self.batch_size):
