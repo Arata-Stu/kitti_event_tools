@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import torch
 from pathlib import Path
-from src.data.stream_dataset import build_stream_dataset
+from src.data.dataset import build_stream_dataset
 from pathlib import Path
 
 def save_sequence_as_video(images_list, out_path, fps=10):

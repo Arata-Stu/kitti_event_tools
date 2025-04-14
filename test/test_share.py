@@ -2,7 +2,7 @@
 import sys
 sys.path.append("..")
 from omegaconf import OmegaConf
-from src.data.stream_dataset import build_stream_dataset
+from src.data.dataset import build_stream_dataset
 from src.data.utils.sharded_stream_sampler import ShardedSequenceSampler
 from torch.utils.data import DataLoader
 from pathlib import Path
