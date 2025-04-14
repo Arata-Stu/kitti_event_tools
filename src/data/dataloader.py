@@ -1,8 +1,8 @@
 from typing import Literal
-from data.dataset import build_random_dataset, build_stream_datasets
-from data.utils.multi_stream_sampler import MultiStreamSampler
-from data.utils.sharded_stream_sampler import ShardedSequenceSampler
-from data.utils.collate import custom_collate_rnd, custom_collate_streaming
+from src.data.dataset import build_random_dataset, build_stream_datasets
+from src.data.utils.multi_stream_sampler import MultiStreamSampler
+from src.data.utils.sharded_stream_sampler import ShardedSequenceSampler
+from src.data.utils.collate import custom_collate_rnd, custom_collate_streaming
 from torch.utils.data import DataLoader, get_worker_info
 
 def get_seq_ids(mode: str):

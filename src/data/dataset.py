@@ -1,5 +1,5 @@
 from pathlib import Path
-from data.sequence_map import SequenceForMap
+from src.data.sequence_map import SequenceForMap
 from torch.utils.data import ConcatDataset
 
 def get_seq_ids(mode: str):
