@@ -2,6 +2,7 @@ from torch.utils.data import DataLoader, get_worker_info
 from omegaconf import DictConfig
 
 from src.data.dataset import build_stream_dataset, build_random_dataset
+from torch.utils.data import IterableDataset
 
 from src.data.utils.multi_stream_sampler import MultiStreamSampler
 from src.data.utils.sharded_stream_sampler import ShardedSequenceSampler
@@ -16,6 +17,17 @@ def get_seq_ids(dataset_mode: str) -> list:
         raise ValueError(f"Invalid dataset mode: {dataset_mode}")
 
 
+class WrappedSamplerDataset(IterableDataset):
+    def __init__(self, sampler):
+        self.sampler = sampler
+
+    def __iter__(self):
+        worker_info = get_worker_info()
+        worker_id = 0 if worker_info is None else worker_info.id
+        for batch in self.sampler:
+            yield batch, worker_id
+
+
 def build_stream_dataloader(dataset_mode: str = "test",
                             dataset_cfg: DictConfig = None,
                             batch_size: int = 4,
@@ -23,44 +35,30 @@ def build_stream_dataloader(dataset_mode: str = "test",
                             pin_memory: bool = True):
     """
     ストリーミング用 DataLoader を構築します。
-    
-    - train: ランダム MultiStreamSampler を使用（シーケンス混合）
-    - val/test: 分割された ShardedSampler を使用（順序保存＋重複なし）
-
-    Parameters:
-        dataset_mode (str): "train" / "val" / "test"
-        dataset_cfg (DictConfig): データセット設定（ev_repr_name, seq_len などを含む）
     """
-    # シーケンスIDを取得
     seq_ids = get_seq_ids(dataset_mode)
 
-    # データセット構築
     dataset = build_stream_dataset(
         dataset_mode=dataset_mode,
         seq_ids=seq_ids,
-        dataset_cfg=dataset_cfg.data_dir,
+        dataset_cfg=dataset_cfg.data_dir,  # ※ここたぶん dataset_cfg 全体を渡すべき？
     )
 
-    # サンプラーの選択
     if dataset_mode == "train":
         sampler = MultiStreamSampler(dataset.datasets, batch_size=batch_size)
-    else:  # val or test
+    else:
         sampler = ShardedSequenceSampler(dataset.datasets, batch_size=batch_size)
 
-    # WorkerごとのIDを保持しながらイテレータをラップ
-    def _wrapped_iter():
-        worker_info = get_worker_info()
-        worker_id = 0 if worker_info is None else worker_info.id
-        for batch in sampler:
-            yield batch, worker_id
+    wrapped_dataset = WrappedSamplerDataset(sampler)
 
     return DataLoader(
-        dataset=_wrapped_iter(),
+        dataset=wrapped_dataset,
         batch_size=None,
         num_workers=num_workers,
         pin_memory=pin_memory,
         collate_fn=custom_collate_streaming,
     )
+
 
 def build_random_dataloader(dataset_mode: str = "train",
                             dataset_cfg: DictConfig = None,
