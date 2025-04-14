@@ -5,7 +5,7 @@ try:
     import hdf5plugin
 except ImportError:
     pass
-from torch.utils.data import IterableDataset, get_worker_info
+from torch.utils.data import get_worker_info
 
 from .sequence_base import SequenceBase
 
@@ -57,11 +57,3 @@ class SequenceForStreaming(SequenceBase):
                 yield outputs
 
                 index += self.seq_len
-
-
-class StreamingSequenceDataset(IterableDataset):
-    def __init__(self, sequence: SequenceForStreaming):
-        self.sequence = sequence
-
-    def __iter__(self):
-        return iter(self.sequence)
