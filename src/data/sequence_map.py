@@ -4,7 +4,7 @@ import h5py
 import cv2
 from torch.utils.data import Dataset
 from collections import defaultdict
-
+import math
 
 class SequenceForMap(Dataset):
     def __init__(self, data_dir: Path, sequence_name: str, ev_repr_name: str,
@@ -25,13 +25,15 @@ class SequenceForMap(Dataset):
         with h5py.File(self.event_file, "r") as f:
             self.num_event_frames = f["data"].shape[0]
 
+        # 実際に利用できるフレーム数（画像とイベントのどちらも）を決定
         self.total_frames = min(len(self.image_files), self.num_event_frames)
-        self.length = self.total_frames - seq_len + 1
+        # オーバーラップなしなので、サンプル数はシーケンス長で割った商+余りがあれば1つ追加
+        self.num_samples = math.ceil(self.total_frames / self.seq_len)
 
         self.labels = self._load_labels()
 
     def __len__(self):
-        return self.length
+        return self.num_samples
 
     def _load_labels(self):
         if not self.labels_file.exists():
@@ -75,22 +77,70 @@ class SequenceForMap(Dataset):
         img = np.transpose(img, (2, 0, 1))  # [C, H, W]
         return img
 
+    def get_padding_sample(self):
+        """
+        パディング用の1フレーム分のサンプルを生成する。
+        画像はゼロで埋めた配列、イベントもゼロ配列、ラベルは空リストを返す。
+        """
+        pad_image = None
+        # 実際の画像の形状は先頭フレームから取得
+        if len(self.image_files) > 0:
+            sample_image = self._load_image(0)
+            pad_image = np.zeros_like(sample_image)
+        else:
+            raise RuntimeError("画像ファイルが存在しません。")
+            
+        # イベントは h5py から形状を取得
+        with h5py.File(self.event_file, "r") as f:
+            events_shape = list(f["data"].shape)
+        # 1フレーム分のイベントの形状（T が 1）
+        pad_events = np.zeros(events_shape[1:], dtype=np.float32)
+        pad_labels = []  # ラベルは空リスト
+        return {
+            "images": pad_image,
+            "labels": pad_labels,
+            "events": pad_events,
+            "reset_state": False
+        }
+
     def __getitem__(self, index: int):
+        start = index * self.seq_len
+        end = start + self.seq_len
+
         images = []
         labels_seq = []
-        for i in range(index, index + self.seq_len):
-            images.append(self._load_image(i))
-            labels_seq.append(self.labels.get(i, []))  # ラベルがない場合は空リスト
+        is_padded_mask = []  # 各フレームがパディングかどうかを示すマスク
 
-        images = np.stack(images)  # [T, C, H, W]
+        # 利用可能なフレームを収集
+        for i in range(start, min(end, self.total_frames)):
+            images.append(self._load_image(i))
+            labels_seq.append(self.labels.get(i, []))
+            is_padded_mask.append(False)  # 実データの場合は False
+
+        # フレーム数が不足している場合はパディングを追加
+        if len(images) < self.seq_len:
+            pad_count = self.seq_len - len(images)
+            pad_sample = self.get_padding_sample()
+            for _ in range(pad_count):
+                images.append(pad_sample["images"])
+                labels_seq.append(pad_sample["labels"])
+                is_padded_mask.append(True)  # パディング部分は True とする
+
+        images = np.stack(images)
 
         with h5py.File(self.event_file, 'r') as f:
-            events = np.array(f["data"][index : index + self.seq_len])
+            if end <= self.total_frames:
+                events = np.array(f["data"][start:end])
+            else:
+                available_events = np.array(f["data"][start:self.total_frames])
+                pad_events = [pad_sample["events"]] * (self.seq_len - available_events.shape[0])
+                events = np.concatenate([available_events, np.stack(pad_events)], axis=0)
 
         sample = {
             "images": images,
             "labels": labels_seq,
             "events": events,
+            "is_padded_mask": is_padded_mask,  # ここでマスクを付与
             "reset_state": index == 0
         }
 
@@ -98,3 +148,4 @@ class SequenceForMap(Dataset):
             sample = self.transform(sample)
 
         return sample
+
